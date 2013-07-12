@@ -24,6 +24,9 @@ References:
 var fs = require('fs');
 var program = require('commander');
 var cheerio = require('cheerio');
+var sys = require('util');
+var rest = require('restler');
+
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT = "checks.json";
 var URL_DEFAULT = "http://pacific-temple-1225.herokuapp.com/";
@@ -36,6 +39,15 @@ var assertFileExists = function(infile) {
     }
     return instr;
 };
+
+var assertURLExists = function(urlLocation) {
+    rest.get(urlLocation).on('complete', function(data) {
+        sys.puts(data[0].sounds[0].sound[0].message); // auto convert to object
+    });
+
+    return null;
+};
+
 
 var cheerioHtmlFile = function(htmlfile) {
     return cheerio.load(fs.readFileSync(htmlfile));
@@ -57,15 +69,17 @@ var checkHtmlFile = function(htmlfile, checksfile) {
 };
 
 var checkHtmlURL = function(urlLocation, checksfile) {
-    var htmlFile = fetchFileFromURL(urlLocation);
-    return checkHtmlFile(htmlFile, checksfile);
+    rest.get(urlLocation).on('complete', function(data) {
+        var htmlFile = 'temp.html';
+        fs.writeFileSync(htmlFile, data);
+        //console.log(data);
+        var checkJson =  checkHtmlFile(htmlFile, checksfile);
+        var outJson = JSON.stringify(checkJson, null, 4);
+        console.log(outJson);
+    });
 };
 
-var fetchFileFromURL  = function(urlLocation)
-{
-    var htmlFile =    HTMLFILE_DEFAULT;
-    return HTMLFILE_DEFAULT;
-}
+
 var clone = function(fn) {
     // Workaround for commander.js issue.
     // http://stackoverflow.com/a/6772648
@@ -74,21 +88,24 @@ var clone = function(fn) {
 
 if(require.main == module) {
     program
-        .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
-        .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
-        .option('-u, --url <url_file>', 'URL to index.html', clone(assertFileExists), URL_DEFAULT)
+        .option('-c, --checks <check_file>', 'Path to checks.json')//, clone(assertFileExists), CHECKSFILE_DEFAULT)
+        .option('-f, --file <html_file>', 'Path to index.html')//, clone(assertFileExists))//, HTMLFILE_DEFAULT)
+        .option('-u, --url <url_file>', 'URL to index.html')//, URL_DEFAULT)
         .parse(process.argv);
     var checkJson = null;
     if(program.file)
     {
+        console.log('Yu[p');
         checkJson = checkHtmlFile(program.file, program.checks);
+        var outJson = JSON.stringify(checkJson, null, 4);
+        console.log(outJson);
     }
+
     if(program.url)
     {
-        checkJson  = checkHtmlURL(program.url, program.checks);
+        checkHtmlURL(program.url, program.checks);
     }
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
+
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
