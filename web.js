@@ -16,6 +16,7 @@ var readFile = function(fileName)
         return data;
     })
     );
+    console.log(buffer.toString('utf-8'));
     return buffer;
 }
 var port = process.env.PORT || 5000;
